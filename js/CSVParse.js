@@ -376,7 +376,6 @@ function makeColorObject(codes, score) {
     };
     var colorObject_data = {};
 
-    //매핑문제 아직 해결되지 않아서 length code기준으로 걸어두었습니다.
     for (var count = 0; count < codes.length; count++) {
         colorObject_fill[codes[count]] = "rgba(0,84,255," + score[count] + ")";
         colorObject_data[codes[count]] = {
