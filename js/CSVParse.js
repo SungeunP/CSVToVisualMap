@@ -208,12 +208,15 @@ const countriesObject = {
     ]
 };
 
-// csv 파일 파싱
+// PapaParse옵션을 만들어 문자열 파싱
+// parameters
+// csvFile : CSV string
+// return parsed object
 function parseCsvFile(csvFile) {
     // papaParse 옵션 객체
     var parseConfig = {
-        delimiter: ',', // auto-detect (no)
-        newline: "\n", // auto-detect (no)
+        delimiter: ',', // 구분자
+        newline: "\n", // 줄바꿈 구분 (default)
         quoteChar: '"',
         header: false,
         dynamicTyping: false,
@@ -231,14 +234,17 @@ function parseCsvFile(csvFile) {
         fastMode: undefined,
         withCredentials: undefined
     }
-    var csvParse = Papa.parse(csvFile, parseConfig);
+    var csvParse = Papa.parse(csvFile, parseConfig); // Parse
     console.log("csvParse tpye is : " + $.type(csvParse));
-    csvParse.data.splice(0, 3); // 불필요한 데이터는 splice
+    csvParse.data.splice(0, 3); // 불필요한 데이터 splice
     console.log(csvParse);
     return csvParse;
 }
 
-// 0~100의 관심도를 0~1 까지의 투명도로 변환
+// 각 국의 흥미도(0~100) 배열을 transparency(0~1) 배열로 리턴
+// parameters
+// percentData : interestData array (range 0~100)
+// return transparency Array (range 0~1)
 function percentToTransparencyData(percentData) {
     var transparencyData = new Array();
     for (count = 0; count < percentData.length; count++) {
@@ -256,7 +262,10 @@ function percentToTransparencyData(percentData) {
     return transparencyData;
 }
 
-// 각 국의 0~100 관심도를 가져옴
+// parsed object에서 흥미도 데이터 가져옴
+// parameters
+// parseCsvData : parsed object
+// return interestData array
 function getInterestFromCsv(parseCsvData) {
     var csvData = parseCsvData.data;
     var interestData = new Array();
@@ -277,7 +286,10 @@ function getInterestFromCsv(parseCsvData) {
     return interestData;
 }
 
-// csv파일에서 각 국의 나라명을 가져옴
+// parsed object에서 나라명 데이터 가져옴
+// parameters
+// parseCsvData : parsed object
+// return Countries name array
 function getCountriesFromCsv(parseCsvData) {
     var csvData = parseCsvData.data;
     var countryNames = new Array();
@@ -319,7 +331,11 @@ function getCountriesFromCsv(parseCsvData) {
 //     return percent16BitArr;
 // }
 
-// datamap에 사용될 나라별 코드를 한글나라명과 매칭시켜 가져옴
+
+// 한글 나라명으로 데이터셋과 매칭시켜 국가코드로 변환
+// parameters
+// countryNames : Countries name array (korean)
+// return Matched data object
 function mappingCountryToAbbreviation(countryNames) {
     console.log("mapping function started");
     var countriesName_EngCode = []; // mapping해서 저장할 배열
@@ -349,14 +365,18 @@ function mappingCountryToAbbreviation(countryNames) {
 }
 
 
-// datamap에 쓰일 color객체를 만들어줌 (fill,data)
+// 각 국 Fillcolor 데이터 생성
+// parameters
+// codes : Countries code array
+// score : Interest data array
+// return Fill object
 function makeColorObject(codes, score) {
     var colorObject_fill = {
         defaultFill: "#F2F2F2"
     };
     var colorObject_data = {};
 
-    //매핑문제 아직 해결되지 않아서 length code기준으로 걸어두었습니다. (해결시 score 기준으로 걸 예정)
+    //매핑문제 아직 해결되지 않아서 length code기준으로 걸어두었습니다.
     for (var count = 0; count < codes.length; count++) {
         colorObject_fill[codes[count]] = "rgba(0,84,255," + score[count] + ")";
         colorObject_data[codes[count]] = {
@@ -369,6 +389,7 @@ function makeColorObject(codes, score) {
         data: colorObject_data
     };
 }
+
 
 // main process
 function csvLoadDataMap() {
