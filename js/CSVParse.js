@@ -1,4 +1,4 @@
-	// 나라명과 나라코드의 오브젝트 배열
+		// 나라명과 나라코드의 오브젝트 배열
 const countriesObject = {
     countries: [
         ["안도라", "AND"],
@@ -208,13 +208,15 @@ const countriesObject = {
     ]
 };
 
-// PapaParse옵션을 만들어 문자열 파싱
-// parameters
-// csvFile : CSV string
-// return parsed object
-function parseCsvFile(csvFile) {
-    // papaParse 옵션 객체
-    var parseConfig = {
+var maxInterest = -1,
+	minInterest = -1;
+
+var Settings = {
+	style : {
+		interestColor : "rgba(0,84,255,", // rgba(red,green,blue,
+		defaultColor : "#EAEAEA"
+	},
+	parse : {
         delimiter: ',', // 구분자
         newline: "\n", // 줄바꿈 구분 (default)
         quoteChar: '"',
@@ -233,11 +235,42 @@ function parseCsvFile(csvFile) {
         beforeFirstChunk: undefined,
         fastMode: undefined,
         withCredentials: undefined
-    }
+    },
+	transparency : {
+		setMinTrans : 0.1,
+	}
+};
+	
+// PapaParse옵션을 만들어 문자열 파싱
+// parameters
+// csvFile : CSV string
+// return parsed object
+function parseCsvFile(csvFile) {
+    // papaParse 옵션 객체
+    var parseConfig = Settings.parse;
     var csvParse = Papa.parse(csvFile, parseConfig); // Parse
     console.log("csvParse tpye is : " + $.type(csvParse));
     csvParse.data.splice(0, 3); // 불필요한 데이터 splice
-    console.log(csvParse);
+	
+	// delete blank array , 비어있는 배열 삭제 
+	for(var i = 0 ; i<csvParse.data.length ; i++ ){ 
+		if(csvParse.data[i][0] == undefined || csvParse.data[i][1] == undefined){
+			console.log("parseCsvFile - deleted data index : " + i);
+			console.log(csvParse.data[i][0]);
+			console.log(csvParse.data[i][1]);
+			csvParse.data.splice(i,1);
+		}
+	}
+	
+	// set maxInterest
+	if(csvParse.data[0][1] != undefined){ 
+		maxInterest = csvParse.data[0][1];
+	}
+	// set minInterest
+	if(csvParse.data[csvParse.data.length-1][1] != undefined){
+		minInterest = csvParse.data[csvParse.data.length-1][1];
+	}
+	
     return csvParse;
 }
 
@@ -247,6 +280,7 @@ function parseCsvFile(csvFile) {
 // return transparency Array (range 0~1)
 function percentToTransparencyData(percentData) {
     var transparencyData = new Array();
+	console.log(percentData);
     for (count = 0; count < percentData.length; count++) {
         if (percentData[count] == undefined) {
             transparencyData.push("undefined");
@@ -256,7 +290,11 @@ function percentToTransparencyData(percentData) {
             console.log(count + "th data is not a number");
             transparencyData.push(0);
         } else {
-            transparencyData.push(percentData[count] / 100);
+			if(percentData[count]/maxInterest <= Settings.transparency.setMinTrans){ // 투명도가 0.1 이하(호감도:10이하)로 내려가는 나라들의 투명도를 0.1로 고정
+				transparencyData.push(Settings.transparency.setMinTrans);			 // 투명도가 0.1 이하일 시 사람이 보기 어려움
+			}else{
+				transparencyData.push(percentData[count] / maxInterest);
+			}
         }
     }
     return transparencyData;
@@ -269,15 +307,17 @@ function percentToTransparencyData(percentData) {
 function getInterestFromCsv(parseCsvData) {
     var csvData = parseCsvData.data;
     var interestData = new Array();
+	console.log("getInterestFromCsv");
+    console.log(csvData);
     if (csvData != null || csvData != undefined) {
         for (count = 0; count < csvData.length - 1; count++) {
-            var data = csvData[count + 1][1];
+            var data = csvData[count][1];
             if (data == undefined) {
                 interestData.push("undefined");
             } else if (data == null) {
                 interestData.push("null");
             } else {
-                interestData.push(Number(csvData[count + 1][1]));
+                interestData.push(Number(data));
             }
         }
     } else {
@@ -293,10 +333,11 @@ function getInterestFromCsv(parseCsvData) {
 function getCountriesFromCsv(parseCsvData) {
     var csvData = parseCsvData.data;
     var countryNames = new Array();
+	console.log("getCountriesFromCsv");
     console.log(csvData);
     if (csvData != null || csvData != undefined) {
         for (var count = 0; count < csvData.length - 1; count++) {
-            var data = csvData[count + 1][0];
+            var data = csvData[count][0];
             if (data == undefined) {
                 countryNames.push("undefined");
             } else if (data == null) {
@@ -337,7 +378,6 @@ function getCountriesFromCsv(parseCsvData) {
 // countryNames : Countries name array (korean)
 // return Matched data object
 function mappingCountryToAbbreviation(countryNames) {
-    console.log("mapping function started");
     var countriesName_EngCode = []; // mapping해서 저장할 배열
     var countriesName_Kor = [];
 
@@ -357,7 +397,6 @@ function mappingCountryToAbbreviation(countryNames) {
             console.log("나라이름이 null 혹은 빈칸이거나 정의되지 않음 index : " + outerCount);
         }
     }
-
     return {
         code: countriesName_EngCode,
         kor: countriesName_Kor
@@ -372,12 +411,12 @@ function mappingCountryToAbbreviation(countryNames) {
 // return Fill object
 function makeColorObject(codes, score) {
     var colorObject_fill = {
-        defaultFill: "#F2F2F2"
+        defaultFill: Settings.style.defaultColor
     };
     var colorObject_data = {};
 
     for (var count = 0; count < codes.length; count++) {
-        colorObject_fill[codes[count]] = "rgba(0,84,255," + score[count] + ")";
+        colorObject_fill[codes[count]] = Settings.style.interestColor + score[count] + ")";
         colorObject_data[codes[count]] = {
             fillKey: codes[count]
         };
@@ -397,7 +436,7 @@ function csvLoadDataMap() {
     var mapped_CountriesCode; // 각 국의 매핑된 나라코드
     var datamapObject_fill; // datamap에 사용될 fill object
     var datamapObject_data; // datamap에 사용될 data object
-    var fileElem = document.getElementById("inputFile");
+	var fileElem = document.getElementById("inputFile");
     file = fileElem.files[0];
     fr = new FileReader();
     fr.onload = function(event) {
@@ -419,12 +458,16 @@ function csvLoadDataMap() {
         datamapObject_fill = makeObjectFunction.fill; // fill object
 
         ///////////////////////////////////
-        /*              로그               */
+        /*              log              */
         ///////////////////////////////////
         console.log(" --- 매핑된 데이터 --- ");
         console.log(mapped_CountriesName);
         console.log(mapped_CountriesCode);
 
+		console.log(" --- 호감도 Max, Min --- ");
+		console.log(" Max : " + maxInterest);
+		console.log(" Min : " + minInterest);
+		
         console.log(" --- 투명도 데이터 --- ");
         console.log(TransparencyData);
 
@@ -441,16 +484,20 @@ function csvLoadDataMap() {
         console.log(datamapObject_fill);
         console.log(datamapObject_data);
 
-        // end
+        // log end
 
         var basic_choropleth = new Datamap({
             element: document.getElementById("container"),
             projection: 'mercator',
-            height: 700,
-            width: 1000,
+			responsive : true,
+            height: null,
+            width: null,
             fills: datamapObject_fill,
             data: datamapObject_data
         });
-    }
-    fr.readAsText(file); // 파일 읽어옴
+		window.addEventListener('resize', function(event) {
+			basic_choropleth.resize();
+		});
+	}
+	fr.readAsText(file); // 파일 읽어옴
 }
